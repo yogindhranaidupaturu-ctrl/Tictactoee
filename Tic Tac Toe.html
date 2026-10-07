@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tic Tac Toe</title>
+<style>
+:root{--ink:#f6f3ff;--x:#ff7a90;--o:#5fe3d0;--glass:rgba(255,255,255,.12);--edge:rgba(255,255,255,.28);--win:rgba(255,220,120,.35);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:"Trebuchet MS",Verdana,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;
+background:radial-gradient(circle at 15% 12%,#ff5f8f 0,transparent 42%),radial-gradient(circle at 88% 20%,#4fd1e8 0,transparent 40%),radial-gradient(circle at 70% 92%,#8b5cf6 0,transparent 45%),linear-gradient(160deg,#1b1147,#2a1a6e 55%,#0f3a6b);background-color:#1b1147;background-attachment:fixed}
+h1{margin:0;font-size:1.8rem;letter-spacing:.04em;text-shadow:0 2px 12px rgba(0,0,0,.35)}
+#status{font-size:1.15rem;min-height:1.5em}
+.card{background:var(--glass);border:1px solid var(--edge);border-radius:22px;padding:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(82vw,340px);aspect-ratio:1}
+.c{background:rgba(255,255,255,.1);border:1px solid var(--edge);border-radius:14px;font:700 clamp(2.5rem,16vw,4.2rem)/1 "Trebuchet MS",Verdana,sans-serif;cursor:pointer;color:var(--ink);transition:transform .12s,background .2s}
+.c:active{transform:scale(.94)}
+.c:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.c.x{color:var(--x);text-shadow:0 0 14px var(--x)}.c.o{color:var(--o);text-shadow:0 0 14px var(--o)}.c.w{background:var(--win)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+button.b{background:rgba(255,255,255,.14);color:var(--ink);border:1px solid var(--edge);border-radius:999px;padding:9px 16px;font:inherit;cursor:pointer}
+button.b.on{background:#fff;color:#2a1a6e;font-weight:700}
+button.main{background:linear-gradient(135deg,#ff7a90,#8b5cf6);border:0;font-weight:700}
+#score{font-size:.95rem;opacity:.9}
+#lv.hide{display:none}
+</style>
+</head>
+<body>
+<h1>Tic Tac Toe</h1>
+<div id="status" aria-live="polite"></div>
+<div class="card"><div id="board"></div></div>
+<div class="row" id="lv">
+<button class="b" data-l="easy">Easy</button>
+<button class="b on" data-l="medium">Medium</button>
+<button class="b" data-l="hard">Hard</button>
+</div>
+<div class="row">
+<button class="b main" id="again">New game</button>
+<button class="b" id="mode">vs Computer</button>
+</div>
+<div id="score"></div>
+<script>
+var L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+var b,turn,over,solo=true,lvl='medium',sc={X:0,O:0,D:0};
+var boardEl=document.getElementById('board'),st=document.getElementById('status'),cells=[];
+for(var i=0;i<9;i++){(function(i){var c=document.createElement('button');c.className='c';c.setAttribute('aria-label','Square '+(i+1));c.onclick=function(){play(i,true)};boardEl.appendChild(c);cells.push(c)})(i)}
+function win(s){for(var k=0;k<8;k++){var l=L[k];if(s[l[0]]&&s[l[0]]==s[l[1]]&&s[l[0]]==s[l[2]])return l}return null}
+var gid=0;function reset(){gid++;b=Array(9).fill('');turn='X';over=false;cells.forEach(function(c){c.textContent='';c.className='c'});msg()}
+function msg(){if(!over)st.textContent=solo&&turn=='O'?'Computer is thinking…':turn+"'s turn"}
+function score(){document.getElementById('score').textContent='X: '+sc.X+'   O: '+sc.O+'   Draws: '+sc.D}
+function play(i,human){
+ if(over||b[i]||(solo&&turn=='O'&&human))return;
+ b[i]=turn;cells[i].textContent=turn;cells[i].classList.add(turn.toLowerCase());
+ var w=win(b);
+ if(w){over=true;w.forEach(function(j){cells[j].classList.add('w')});sc[turn]++;st.textContent=solo?(turn=='X'?'You win!':'Computer wins'):turn+' wins!';score();return}
+ if(b.every(Boolean)){over=true;sc.D++;st.textContent="It's a draw";score();return}
+ turn=turn=='X'?'O':'X';msg();
+ if(solo&&turn=='O')(function(g){setTimeout(function(){if(g===gid)ai()},450)})(gid);
+}
+function best(s,p){
+ var w=win(s);if(w)return{v:s[w[0]]=='O'?1:-1};
+ if(s.every(Boolean))return{v:0};
+ var r=null;
+ for(var i=0;i<9;i++){if(s[i])continue;s[i]=p;var o=best(s,p=='O'?'X':'O');s[i]='';
+  if(r===null||(p=='O'?o.v>r.v:o.v<r.v))r={v:o.v,m:i}}
+ return r;
+}
+function free(){var f=[];for(var i=0;i<9;i++)if(!b[i])f.push(i);return f}
+function finish(p){var f=free();for(var k=0;k<f.length;k++){b[f[k]]=p;var w=win(b);b[f[k]]='';if(w)return f[k]}return -1}
+function rnd(f){return f[Math.floor(Math.random()*f.length)]}
+function ai(){
+ if(over||turn!=='O')return;var f=free(),m=-1;
+ if(lvl==='hard')m=best(b.slice(),'O').m;
+ else if(lvl==='medium'){m=finish('O');if(m<0)m=finish('X')}
+ else if(Math.random()<.25)m=finish('O');
+ if(m==null||m<0)m=rnd(f);
+ play(m,false);
+}
+document.getElementById('again').onclick=reset;
+var lvEl=document.getElementById('lv');
+lvEl.onclick=function(e){var l=e.target.getAttribute('data-l');if(!l)return;lvl=l;[].forEach.call(lvEl.children,function(x){x.classList.toggle('on',x===e.target)});sc={X:0,O:0,D:0};score();reset()};
+document.getElementById('mode').onclick=function(){solo=!solo;this.textContent=solo?'vs Computer':'2 Players';lvEl.classList.toggle('hide',!solo);sc={X:0,O:0,D:0};score();reset()};
+reset();score();
+</script>
+</body>
+</html>
